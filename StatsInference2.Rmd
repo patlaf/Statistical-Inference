@@ -1,0 +1,95 @@
+---
+title: "Statistical Inference - Course Project"
+author: "Part 2"
+output: pdf_document
+---
+
+This is the project part 2 of the statistical inference class. In this project, I will use the ToothGrowth dataset available in the R Dataset Package to compare tooth growth by supp and dose.
+
+
+### 1. Load the ToothGrowth data and perform some basic exploratory data analyses 
+
+[The ToothGrowth dataset](https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/ToothGrowth.html) provides data about the effect of Vitamin C on Tooth Growth in Guinea Pigs. The response is the length of odontoblasts (teeth) in each of 10 guinea pigs at each of three dose levels of Vitamin C (0.5, 1, and 2 mg) with each of two delivery methods (orange juice or ascorbic acid).
+```{r}
+library(datasets)
+data(ToothGrowth)
+str(ToothGrowth) 
+```
+The data frame has 60 observations of 3 variables
+
+ * len - Tooth length
+ * supp - The Supplement type (Vitamin C (VC) or Orange Juice (OJ))
+ * dose - The dose in milligrams
+
+```{r}
+head(ToothGrowth,5)
+```
+
+### 2. Provide a basic summary of the data.
+Each combinaison of supplements and doses has 10 measures (10 * 3 doses * 2 types = 60 observations). Here is an overview of the distribution:
+
+```{r echo=FALSE}
+library(ggplot2)
+g <- ggplot(ToothGrowth, aes(x=supp,y=len, fill=supp))+geom_boxplot()+facet_wrap(~dose)+xlab('Supplement')+ylab('Tooth Length')+ggtitle("Tooth length by dosage")
+print(g)
+```
+
+As we can see, the length has more extrem values when the supplement comes from Vitamin C. However, if we look at the mean, the Orange Juice supplement seems to provide a better tooth growth with smaller doses.
+
+```{r}
+aggregate(ToothGrowth$len, by=list('Dose'=ToothGrowth$dose,'Supp'=ToothGrowth$supp), FUN = mean)
+```
+
+### 3. Compare tooth growth by supp and dose
+
+I will first test if the Orange Juice is better than Vitamin C in term of tooth growth. The null hypothesis is that Orange Juice and Vitamin C perform the same. 
+
+$H_0$: $\mu_{OJ}$ - $\mu_{VC}$ = 0
+
+$H_1$: $\mu_{OJ}$ - $\mu_{VC}$ > 0
+
+As the number of observation is not high, I'll use t-test and assume the populations are independent, are not paired and have unequal variances:
+
+```{r}
+t.test(len~supp, paired=F, var.equal=F, data=ToothGrowth)
+```
+
+The 95% confidence interval is [-0.171, 7.571] for $\mu_{OJ}$ - $\mu_{VC}$  and it contains 0. So I cannot reject the null hypothesis, in other words, Orange Juice is not better than Vitamin C.
+
+
+
+The previous plot shows a significant mean difference with the 3 differente dosages. I will repeat the same test using the mean difference with dosage 0.5 ans dosage 2.
+
+```{r}
+t <- subset(ToothGrowth, dose %in% c(0.5,2))
+t.test(len~dose, paired=F, var.equal=F, data=t)
+```
+
+With a 95% confidence interval of [-18.16, -12.83] for $\mu_{dose 0.5}$ - $\mu_{dose 2}$ (p-value = 4.398e-14), I reject the null hypothesis that there is no difference in tooth length between dosage 0,5 and 2. According to this test, the higher the dosage is, the longer the teeth are.
+
+
+
+Now let's compare the effect of dosage depending on the supplement type.
+
+```{r}
+t05 <- subset(ToothGrowth, dose == 0.5)
+t1 <- subset(ToothGrowth, dose == 1)
+t2 <- subset(ToothGrowth, dose == 2)
+t.test(len~supp, paired=F, var.equal=F, data=t05)
+t.test(len~supp, paired=F, var.equal=F, data=t1)
+t.test(len~supp, paired=F, var.equal=F, data=t2)
+```
+
+* For a dosage of 0.5mg, the 95% confidence interval of [1.719, 8.781] for $\mu_{OJ}$ - $\mu_{VC}$ (p-value = 0.006359), so I reject the null hypothesis. At this dosage, orange Juice is better than Vitamin C.
+
+* For a dosage of 1g, the 95% confidence interval of [2.802, 9.058] for $\mu_{OJ}$ - $\mu_{VC}$ (p-value = 0.001038), so I reject the null hypothesis. At this dosage, orange Juice is better than Vitamin C.
+
+* For a dosage of 1g, the 95% confidence interval of [-3.798,  3.638] for $\mu_{OJ}$ - $\mu_{VC}$ (p-value = 0.9639), so I cannot reject the null hypothesis. At this dosage, orange Juice is as good as Vitamin C.
+
+### 4. Conclusion
+
+As we saw, if dosage is ignored, there is no significant difference in the tooth length between Orange Juice and Vitamin C. However, if the supplement type is ignored, the plot and the second t.test show that a higher dose provides a significant difference.
+
+One interesting conclusion is that Orange Juice do have a larger impact than Vitamin C on tooth growth with a smaller dosage. At a dosage of 2 mg, the impact became the same.
+
+All tests assume the populations are independent, are not paired and have unequal variances. A pig cannot be "reused" to measure the their tooth growth twice.
